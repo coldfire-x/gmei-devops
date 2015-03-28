@@ -16,8 +16,8 @@ def green(txt):
 
 
 def confirm(txt):
-    ok = raw_input('==>' + Fore.GREEN + '%s?[y/Y] :' + Fore.RESET)
-    if ok.lower in ('y', 'yes'):
+    ok = raw_input('==>' + Fore.GREEN + '%s?[y/Y] :' % txt + Fore.RESET)
+    if ok.lower() in ('y', 'yes'):
         return True
 
     return False
