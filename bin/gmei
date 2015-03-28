@@ -25,6 +25,7 @@ def _setup_init_parser(subparser):
 
     cmdp.add_argument(
         '--vbox',
+        required=True,
         help='vbox template path'
         )
     cmdp.set_defaults(func=_init)
