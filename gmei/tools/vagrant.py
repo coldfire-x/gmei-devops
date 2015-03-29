@@ -7,7 +7,7 @@ import ConfigParser
 from functools import wraps
 
 import gmei
-from gmei.utils import confirm, alert
+from gmei.utils import confirm, alert, green
 
 
 class _VagrantConfig(object):
@@ -137,20 +137,32 @@ class Vagrant(object):
     def _vagrant_template(self):
         return VAGRANT_TEMPLATE
 
+    def _call(self, cmd, slient=False):
+        """vagrant cmd call wiht subprocess.check_call."""
+        cmd = '%s %s' % (self.bin, cmd)
+        green('==> Running %s' % cmd)
+
+        try:
+            subprocess.check_call(cmd.split())
+        except Exception as e:
+            if not slient:
+                alert(e.child_traceback)
+
     @vagrant_env_wrapper
     def ssh(self):
-        cmd = '%s ssh' % self.bin
-        subprocess.check_call(cmd.split())
+        self._call('ssh', True)
 
     @vagrant_env_wrapper
     def up(self):
-        cmd = '%s up' % self.bin
-        subprocess.check_call(cmd.split())
+        self._call('up')
 
     @vagrant_env_wrapper
     def down(self):
-        cmd = '%s halt' % self.bin
-        subprocess.check_call(cmd.split())
+        self._call('halt')
+
+    @vagrant_env_wrapper
+    def update(self):
+        self._call('up --provision')
 
 
 VAGRANT_TEMPLATE = '''

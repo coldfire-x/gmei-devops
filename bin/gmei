@@ -44,8 +44,8 @@ def _setup_vm_parser(subparser):
 
     cmdp.add_argument(
         'action',
-        choices=('up', 'down', 'ssh'),
-        help='up|down|ssh',
+        choices=('up', 'down', 'update', 'ssh'),
+        help='up|down|update|ssh',
         )
 
     cmdp.set_defaults(func=vm_manager)

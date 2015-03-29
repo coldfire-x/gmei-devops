@@ -27,6 +27,6 @@ vbox should use the prepared one, with required tools, packages installed
 manage vm
 ====
 
-start, stop and ssh into virtual machine
+start, stop, upgrade and ssh into virtual machine
 
-    gmei vm start|stop|ssh
+    gmei vm up|down|update|ssh
