@@ -1,0 +1,3 @@
+[submodule "gmei-salt"]
+	path = gmei-salt
+	url = git@github.com:pengfei-xue/gmei-salt.git
