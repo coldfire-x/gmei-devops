@@ -7,7 +7,7 @@ import ConfigParser
 from functools import wraps
 
 import gmei
-from gmei.utils import confirm, alert, green
+from gmei.utils import confirm, alert, green, red
 
 
 class _VagrantConfig(object):
@@ -131,7 +131,7 @@ class Vagrant(object):
             try:
                 os.makedirs(self.wk_dir)
             except Exception as e:
-                alert('create working directory %s failed!' % self.wk_dir)
+                alert('==> create working directory %s failed!' % self.wk_dir)
                 print e
                 sys.exit()
 
@@ -153,7 +153,7 @@ class Vagrant(object):
 
     def _init_vagrant_box(self):
         if not os.path.exists(self.vbox):
-            alert('%s does not exist!')
+            alert('==> %s does not exist!')
             sys.exit()
 
         current_dir = os.path.abspath(os.curdir)
@@ -199,6 +199,12 @@ class Vagrant(object):
 
     @vagrant_env_wrapper
     def update(self):
+        ok = confirm('shutdown your virtual machine first')
+        if not ok:
+            red('==> abort upgrade')
+            return
+
+        self.down()
         self._update_salt_repo()
         self._call('up --provision')
 
