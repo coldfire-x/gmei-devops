@@ -53,8 +53,13 @@ class Vagrant(object):
 
     box_name = 'gmei-box'
 
+    # config directory
+    config_dir = os.path.expanduser('~/.gmei')
     # default configuration file, create this after init a box
-    config_path = os.path.expanduser('~/.gmei.ini')
+    config_path = os.path.join(config_dir, 'gmei.ini')
+
+    salt_dir = os.path.join(config_dir, 'salt')
+    salt_repo = 'git@github.com:pengfei-xue/gmei-salt.git'
 
     def vagrant_env_wrapper(f):
         """vagrant execution environment wrapper."""
@@ -82,57 +87,88 @@ class Vagrant(object):
     def _init(self):
         """init vagrant environment.
 
-        create vagrant file, write configs into user's home directory, and finally
-        create a virtual machine.
+        create vagrant file, config directory, write configs into user's home
+        directory, and finally create a virtual machine.
         """
+        self._create_config_dir()
         self._create_working_directory()
+        self._create_salt_repo()
         self._create_vagrant_file()
         self._init_vagrant_box()
 
+    def _create_salt_repo(self):
+        """clone gmei-salt into ~/.gmei/salt."""
+        green('==> Clone salt repo')
+
+        if os.path.exists(self.salt_dir):
+            return
+
+        cmd = 'git clone %s %s' % (self.salt_repo, self.salt_dir)
+        subprocess.check_call(cmd.split())
+
+    def _update_salt_repo(self):
+        """update salt repo."""
+        cmd = 'git -C %s pull' % self.salt_dir
+        subprocess.check_call(cmd.split())
+
+    def _create_config_dir(self):
+        """create config directory ~/.gmei ."""
+        green('==> create configuration directory %s' % self.config_dir)
+
+        if os.path.exists(self.config_dir):
+            return
+
+        os.makedirs(self.config_dir)
+
     def _create_working_directory(self):
-        if not os.path.exists(self.vbox):
-            alert('%s does not exist!')
-            sys.exit(1)
+        green('==> create working space %s' % self.wk_dir)
 
         if not os.path.exists(self.wk_dir):
             ok = confirm('create directory %s' % self.wk_dir)
             if not ok:
-                sys.exit(1)
+                sys.exit()
 
             try:
                 os.makedirs(self.wk_dir)
             except Exception as e:
                 alert('create working directory %s failed!' % self.wk_dir)
                 print e
-                sys.exit(1)
+                sys.exit()
 
     def _create_vagrant_file(self):
+        """create vagrant file in separate directory."""
         path = os.path.join(self.wk_dir, 'vagrant')
-        print '==> creating vagrant folder %s' % path
+        green('==> creating vagrant folder %s' % path)
+
         if not os.path.exists(path):
             os.mkdir(path)
 
         tmpl = self._vagrant_template()
-        vagrantfile = tmpl % (self.box_name, self.wk_dir)
+        minion_conf = os.path.join(self.salt_dir, 'minion')
+        salt_roots = os.path.join(self.salt_dir, 'roots')
+        vagrantfile = tmpl % (self.box_name, self.wk_dir, salt_roots, minion_conf)
         self.vagrantfile_path = os.path.join(path, 'Vagrantfile')
         with open(self.vagrantfile_path, 'w') as f:
             f.write(vagrantfile)
 
     def _init_vagrant_box(self):
+        if not os.path.exists(self.vbox):
+            alert('%s does not exist!')
+            sys.exit()
+
         current_dir = os.path.abspath(os.curdir)
         os.chdir(os.path.dirname(self.vagrantfile_path))
 
-        cmd = '%s box add %s %s --force' % (self.bin, self.box_name, self.vbox)
-        subprocess.check_call(cmd.split())
-
-        cmd = '%s up' % self.bin
-        subprocess.check_call(cmd.split())
+        cmd = 'box add %s %s --force' % (self.box_name, self.vbox)
+        self._call(cmd)
+        self._call('up --provision')
 
         os.chdir(current_dir)
 
     def _write_configs(self):
         self.configer.set('vagrantfile', os.path.dirname(self.vagrantfile_path))
         self.configer.set('box', self.box_name)
+        self.configer.set('salt', self.salt_dir)
 
     def _vagrant_template(self):
         return VAGRANT_TEMPLATE
@@ -146,7 +182,8 @@ class Vagrant(object):
             subprocess.check_call(cmd.split())
         except Exception as e:
             if not slient:
-                alert(e.child_traceback)
+                print e
+                sys.exit()
 
     @vagrant_env_wrapper
     def ssh(self):
@@ -162,6 +199,7 @@ class Vagrant(object):
 
     @vagrant_env_wrapper
     def update(self):
+        self._update_salt_repo()
         self._call('up --provision')
 
 
@@ -206,6 +244,7 @@ Vagrant.configure(2) do |config|
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
   config.vm.synced_folder "%s", "/workspace/"
+  config.vm.synced_folder "%s", "/srv/"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -227,9 +266,10 @@ Vagrant.configure(2) do |config|
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   sudo apt-get update
-  #   sudo apt-get install -y apache2
-  # SHELL
+  config.vm.provision :salt do |salt|
+    salt.minion_config = "%s"
+    salt.run_highstate = true
+    salt.verbose = true
+  end
 end
 '''
