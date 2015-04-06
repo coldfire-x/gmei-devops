@@ -144,7 +144,7 @@ class Vagrant(object):
             os.mkdir(path)
 
         tmpl = self._vagrant_template()
-        minion_conf = os.path.join(self.salt_dir, 'minion')
+        minion_conf = os.path.join(self.salt_dir, 'minion-dev')
         salt_roots = os.path.join(self.salt_dir, 'roots')
         vagrantfile = tmpl % (self.box_name, self.wk_dir, salt_roots, minion_conf)
         self.vagrantfile_path = os.path.join(path, 'Vagrantfile')
