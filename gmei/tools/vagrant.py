@@ -250,7 +250,7 @@ Vagrant.configure(2) do |config|
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
   config.vm.synced_folder "%s", "/workspace/"
-  config.vm.synced_folder "%s", "/srv/"
+  config.vm.synced_folder "%s", "/opt/services"
 
   config.ssh.forward_agent = true
 
